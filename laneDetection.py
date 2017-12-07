@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import videoSetup
 
 def region_of_interest(img, vertices):
     """
@@ -117,12 +118,13 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=6):
 
     cache = next_frame
 
-def detectLanes(orig):
+def detectLanes():
+	from videoSetup import augmented
 	global first_frame
 	first_frame = 1
 
-	gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
-	img_hsv = cv2.cvtColor(orig, cv2.COLOR_RGB2HSV)
+	gray = cv2.cvtColor(augmented, cv2.COLOR_BGR2GRAY)
+	img_hsv = cv2.cvtColor(augmented, cv2.COLOR_RGB2HSV)
 
 	lower_yellow = np.array([20, 100, 100], dtype = "uint8")
 	upper_yellow = np.array([100, 255, 255], dtype = "uint8")
@@ -139,7 +141,7 @@ def detectLanes(orig):
 	high_threshold = 150
 	canny_edges = cv2.Canny(gauss_gray, low_threshold, high_threshold)
 
-	imshape = orig.shape
+	imshape = augmented.shape
 	lower_left = [imshape[1]/9,imshape[0]]
 	lower_right = [imshape[1]-imshape[1]/9,imshape[0]]
 	top_left = [imshape[1]/2-imshape[1]/8,imshape[0]/2+imshape[0]/10]
@@ -157,5 +159,7 @@ def detectLanes(orig):
 	line_img = np.zeros((roi_image.shape[0], roi_image.shape[1], 3), dtype=np.uint8)
 	draw_lines(line_img, lines)
 
-	result = cv2.addWeighted(line_img, 0.8, orig, 1., 0.)
-	return result
+	augmented = cv2.addWeighted(line_img, 0.8, augmented, 1., 0.)
+	print("dl")
+	
+	return augmented
