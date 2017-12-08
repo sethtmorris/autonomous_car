@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import videoSetup
 
 def region_of_interest(img, vertices):
     """
@@ -26,7 +25,7 @@ def region_of_interest(img, vertices):
     masked_image = cv2.bitwise_and(img, mask)
     return masked_image
 
-def draw_lines(img, lines, color=[255, 0, 0], thickness=6):
+def draw_lines_old(img, lines, color=[255, 0, 0], thickness=6):
     """workflow:
     1) examine each individual line returned by hough & determine if it's in left or right lane by its slope
     because we are working "upside down" with the array, the left lane will have a negative slope and right positive
@@ -42,16 +41,22 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=6):
     y_max = img.shape[0]
     l_slope, r_slope = [],[]
     l_lane,r_lane = [],[]
-    det_slope = 0.4
-    alpha =0.2
+    det_slope = 0.4 #0.4
+    alpha = 0.9 #0.2
     #i got this alpha value off of the forums for the weighting between frames.
     #i understand what it does, but i dont understand where it comes from
     #much like some of the parameters in the hough function
 
+    if lines is None:
+        return 1
+
     for line in lines:
         #1
         for x1,y1,x2,y2 in line:
-            slope = (y2-y1)/(x2-x1) # get_slope(x1,y1,x2,y2)
+            if x2-x1 != 0:
+                slope = (y2-y1)/(x2-x1) # get_slope(x1,y1,x2,y2)
+            else:
+                slope = (y2-y1)
             if slope > det_slope:
                 r_slope.append(slope)
                 r_lane.append(line)
@@ -94,10 +99,10 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=6):
     if l_x1 > r_x1:
         l_x1 = int((l_x1+r_x1)/2)
         r_x1 = l_x1
-        l_y1 = int((l_slope_mean * l_x1 )) # + l_intercept)
-        r_y1 = int((r_slope_mean * r_x1 )) # + r_intercept)
-        l_y2 = int((l_slope_mean * l_x2 )) # + l_intercept)
-        r_y2 = int((r_slope_mean * r_x2 )) # + r_intercept)
+        l_y1 = int((l_slope_mean * l_x1 ) + l_b)
+        r_y1 = int((r_slope_mean * r_x1 ) + r_b)
+        l_y2 = int((l_slope_mean * l_x2 ) + l_b)
+        r_y2 = int((r_slope_mean * r_x2 ) + r_b)
     else:
         l_y1 = y_global_min
         l_y2 = y_max
@@ -109,27 +114,56 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=6):
     if first_frame == 1:
         next_frame = current_frame
         first_frame = 0
-    else :
+    else:
         prev_frame = cache
         next_frame = (1-alpha)*prev_frame+alpha*current_frame
 
     cv2.line(img, (int(next_frame[0]), int(next_frame[1])), (int(next_frame[2]),int(next_frame[3])), color, thickness)
     cv2.line(img, (int(next_frame[4]), int(next_frame[5])), (int(next_frame[6]),int(next_frame[7])), color, thickness)
+    #cv2.line(img, (int((next_frame[0]+next_frame[4])/2), int((next_frame[1]+next_frame[5])/2)), (int((next_frame[2]+next_frame[6])/2), int((next_frame[0]+next_frame[4])/2)), color, thickness)
+
 
     cache = next_frame
 
-def detectLanes():
-	from videoSetup import augmented
+def draw_lines(img, lines, color=[255, 0, 0], thickness=6):
+	for line in lines:
+		cv2.line(img, (int(next_frame[0]), int(next_frame[1])), (int(next_frame[2]),int(next_frame[3])), color, thickness)
+		cv2.line(img, (int(next_frame[4]), int(next_frame[5])), (int(next_frame[6]),int(next_frame[7])), color, thickness)
+
+def nothing(x):
+	pass
+
+'''cv2.namedWindow('Yellow', cv2.WINDOW_NORMAL)
+cv2.createTrackbar('H-low','Yellow',0,255,nothing)
+cv2.createTrackbar('S-low','Yellow',0,255,nothing)
+cv2.createTrackbar('V-low','Yellow',0,255,nothing)
+cv2.createTrackbar('H-high','Yellow',0,255,nothing)
+cv2.createTrackbar('S-high','Yellow',0,255,nothing)
+cv2.createTrackbar('V-high','Yellow',0,255,nothing)'''
+
+def detectLanes(augmented):
 	global first_frame
 	first_frame = 1
 
 	gray = cv2.cvtColor(augmented, cv2.COLOR_BGR2GRAY)
 	img_hsv = cv2.cvtColor(augmented, cv2.COLOR_RGB2HSV)
 
-	lower_yellow = np.array([20, 100, 100], dtype = "uint8")
-	upper_yellow = np.array([100, 255, 255], dtype = "uint8")
+	'''h_low = cv2.getTrackbarPos('H-low','Yellow')
+	s_low = cv2.getTrackbarPos('S-low','Yellow')
+	v_low = cv2.getTrackbarPos('V-low','Yellow')
+
+	h_high = cv2.getTrackbarPos('H-high','Yellow')
+	s_high = cv2.getTrackbarPos('S-high','Yellow')
+	v_high = cv2.getTrackbarPos('V-high','Yellow')'''
+
+	#lower_yellow = np.array([h_low, s_low, v_low], dtype = "uint8") #[90, 0, 130]
+	#upper_yellow = np.array([h_high, s_high, v_high], dtype = "uint8") #[100, 140, 160]
+
+	lower_yellow = np.array([30, 0, 140], dtype = "uint8") #[90, 20, 40]
+	upper_yellow = np.array([255, 255, 255], dtype = "uint8") #[110, 60, 170]
 
 	mask_yellow = cv2.inRange(img_hsv, lower_yellow, upper_yellow)
+	#cv2.imshow("Yellow", mask_yellow)
 	mask_white = cv2.inRange(gray, 200, 255)
 	mask_yw = cv2.bitwise_or(mask_white, mask_yellow)
 	mask_yw_image = cv2.bitwise_and(gray, mask_yw)
@@ -157,9 +191,9 @@ def detectLanes():
 
 	lines = cv2.HoughLinesP(roi_image, rho, theta, threshold, np.array([]), min_line_len, max_line_gap)
 	line_img = np.zeros((roi_image.shape[0], roi_image.shape[1], 3), dtype=np.uint8)
-	draw_lines(line_img, lines)
+	draw_lines_old(line_img, lines)
 
 	augmented = cv2.addWeighted(line_img, 0.8, augmented, 1., 0.)
-	print("dl")
+	cv2.imshow("Lanes", augmented)
 	
 	return augmented

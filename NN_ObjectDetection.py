@@ -76,6 +76,7 @@ detection_scores = detection_graph.get_tensor_by_name('detection_scores:0')
 detection_classes = detection_graph.get_tensor_by_name('detection_classes:0')
 
 def findObject(image):
+	#image = nn_in.get()
 	image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
 	with tf.Session(graph=detection_graph) as sess:
 		(boxes, scores, classes) = sess.run([detection_boxes, detection_scores, detection_classes], feed_dict={image_tensor: image_np})
@@ -97,5 +98,6 @@ def findObject(image):
 
 		# Each class with be represented by a differently colored box
 		result = draw_boxes(image, box_coords, classes)
+	cv2.imshow("NN", result)
 
-	return result
+	return boxes, result

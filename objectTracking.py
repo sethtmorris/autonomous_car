@@ -14,7 +14,6 @@ class TrackedObject(object):
 		self.bboxes = [(700, 400, 100, 100)]
 
 	def detectObject(self):
-		from videoSetup import augmented
 		rects, weights = self.HOG.detectMultiScale(augmented, winStride=(4,4), padding=(8,8), scale=1.1)
 
 		# Uncomment to not use non-maxima suppression.
@@ -33,19 +32,16 @@ class TrackedObject(object):
 			picklist.append(tuple(pick))
 		self.bbox = picklist
 
-	def updateTraces(self):
-		from videoSetup import augmented
-		self.detectObject()
-		for bbox in self.bboxes:
+	def updateTraces(self, augmented, boxes):
+		#self.detectObject()
+		for bbox in boxes:
 			self.TRACKER.init(augmented, bbox)
-		print("utp")
 
 		return augmented
 
-	def getTraces(self):
-		from videoSetup import augmented
+	def getTraces(self, augmented, boxes):
 		# Update tracker for all the bounding boxes
-		for bbox in self.bboxes:
+		for bbox in boxes: #self.bboxes:
 			ok, bbox = self.TRACKER.update(augmented)
 
 			# Draw bounding box
@@ -53,7 +49,6 @@ class TrackedObject(object):
 				p1 = (int(bbox[0]), int(bbox[1]))
 				p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
 				cv2.rectangle(augmented, p1, p2, (255,0,0), 2, 1)
-		print("gtp")
-
+		cv2.imshow("Traces", augmented)
 		return augmented
 
