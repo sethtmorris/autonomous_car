@@ -16,7 +16,7 @@ class TrackedObject(object):
 	def detectObject(self):
 		from videoSetup import augmented
 		rects, weights = self.HOG.detectMultiScale(augmented, winStride=(4,4), padding=(8,8), scale=1.1)
-	
+
 		# Uncomment to not use non-maxima suppression.
 		rectlist = []
 		for rect in rects:
@@ -39,7 +39,7 @@ class TrackedObject(object):
 		for bbox in self.bboxes:
 			self.TRACKER.init(augmented, bbox)
 		print("utp")
-		
+
 		return augmented
 
 	def getTraces(self):
