@@ -3,13 +3,22 @@ import os
 import cv2
 import tensorflow as tf
 import numpy as np
-from mvnc import mvncapi as mvnc
+try:
+	from mvnc import mvncapi as mvnc
+except ImportError:
+	print("Movidius neural compute stick libraries not found. See https://developer.movidius.com/start for installation instructions.")
+
+GRAPH_FILE = 'frozen_inference_graph.pb'
 
 def setupMovidius():
-	devices = mvnc.EnumerateDevices()
-	if len(devices) != 0:
-		device = mvnc.Device(devices[0])
-		device.OpenDevice()
+	try:
+		devices = mvnc.EnumerateDevices()
+		if len(devices) != 0:
+			device = mvnc.Device(devices[0])
+			device.OpenDevice()
+			movidius_graph = device.AllocateGraph('ssd_mobilenet_v1_coco_2017_11_17/frozen_inference_graph.pb')
+	except ImportError:
+		print("Movidius not setup")
 
 def filter_boxes(min_score, boxes, scores, classes):
 	"""Return boxes with a confidence >= `min_score`"""
@@ -42,9 +51,7 @@ def draw_boxes(image, boxes, classes, thickness=4):
 	for i in range(len(boxes)):
 		bot, left, top, right = boxes[i, ...]
 		class_id = int(classes[i])
-		#color = COLOR_LIST[class_id]
-		#draw.line([(left, top), (left, bot), (right, bot), (right, top), (left, top)], width=thickness, fill=color)
-		cv2.rectangle(image,(left, top),(right,bot),(0,255,0),3)
+		cv2.rectangle(image,(left, top),(right,bot),(255,0,255),10)
 	return image
 
 def load_graph(graph_file):
@@ -58,7 +65,6 @@ def load_graph(graph_file):
             tf.import_graph_def(od_graph_def, name='')
     return graph
 
-GRAPH_FILE = 'ssd_mobilenet_v1_coco_2017_11_17/frozen_inference_graph.pb'
 detection_graph = load_graph(GRAPH_FILE)
 
 # The input placeholder for the image.
@@ -74,6 +80,8 @@ detection_scores = detection_graph.get_tensor_by_name('detection_scores:0')
 
 # The classification of the object (integer id).
 detection_classes = detection_graph.get_tensor_by_name('detection_classes:0')
+
+#cv2.namedWindow('Objects', cv2.WINDOW_NORMAL)
 
 def findObject(image):
 	#image = nn_in.get()
@@ -92,12 +100,11 @@ def findObject(image):
 
 		# The current box coordinates are normalized to a range between 0 and 1.
 		# This converts the coordinates actual location on the image.
-		#width, height = image.size
 		height, width, channels = image.shape
 		box_coords = to_image_coords(boxes, height, width)
 
 		# Each class with be represented by a differently colored box
-		result = draw_boxes(image, box_coords, classes)
-	cv2.imshow("NN", result)
+		#result = draw_boxes(image, box_coords, classes)
+	#im.show(result)
 
-	return boxes, result
+	return box_coords

@@ -8,66 +8,77 @@ import laneDetection
 import objectTracking
 import NN_ObjectDetection as nn
 
-#cv2.namedWindow("Original")
-#cv2.namedWindow("Augmented")
-
 try:
 	camera = cv2.VideoCapture("driving.mp4")
 except:
 	sys.exit(1)
 ok, original = camera.read()
 
+frame_width = int(camera.get(3))
+frame_height = int(camera.get(4))
+#output = cv2.VideoWriter('outpy.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (frame_width,frame_height))
+#output.open("driving.mp4")
+
+# Uncomment to use the Movidius neural computer stick.
 nn.setupMovidius()
 
+# Obsolete use of HOG and Linear SVM for detecting people.
 peopleHOG = cv2.HOGDescriptor()
 peopleHOG.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 peopleTracker = objectTracking.TrackedObject(peopleHOG)
 
-#nn_imagepipe = Queue(30)
-#nn_in, orig_out = Pipe()
-#fo = Process(target=nn.findObject, args=(nn_imagepipe,))
-#fo.start()
+# Attempt to use Pipe() and Process().
+"""
+nn_in, orig_out = Pipe()
+fo = Process(target=nn.findObject, args=(nn_in,))
+fo.start()
+"""
+
+# Attempt at my own implementation of multithreading.
+
+"""
+def findAndTrace ():
+	ok, frame = camera.read()
+	boxes, neural = nn.findObject(frame)
+	peopleTracker.updateTraces(frame, boxes)
 
 def do_every (interval, periodic_func):
-	ok, frame = camera.read()
-	periodic_func(frame)
+	periodic_func()
 	threading.Timer(interval, periodic_func).start()
 
-#do_every(1, peopleTracker.updateTraces)
-#do_every(0.5, laneDetection.detectLanes)
-#do_every(0.5, peopleTracker.getTraces)
-#do_every(1, nn.findObject)
+do_every(5, findAndTrace)
+"""
 
-boxes = []
+boxes = nn.findObject(original)
 count = 0
 period = 30
 while camera.isOpened():
-	ok, original = camera.read()
+	ok, frame = camera.read()
 
 	if ok:
-		#augmented = original.copy()
-		#orig_out.send_bytes(original, 720)
-		lanes = laneDetection.detectLanes(original)
-		#nn_imagepipe.put(original)		
+		#orig_out.send_bytes(original, 720) # From attempt to use Pipe()
+		lanes = laneDetection.detectLanes(frame)
+
 		if count%period != 0:
 			pass
 		else:
-			boxes, neural = nn.findObject(lanes)
-			#fo.run()
-		#peopleTracker.updateTraces(original, boxes)
-		#peopleTracker.getTraces(original, boxes)
-		count += 1
-		#cv2.imshow("Original", original)
-		#cv2.imshow("Augmented", augmented)
+			#fo.run() # From attempt to use Process()
+			boxes = nn.findObject(frame)
+			peopleTracker.updateTraces(frame, boxes)
 
-	else:
-		camera.set(cv2.CAP_PROP_POS_FRAMES, 0)
+		traces = peopleTracker.getTraces(lanes)
+		#boxes = nn.findObject(frame)
+		#output.write(boxes)
+		cv2.imshow("Output", traces)
+		count += 1
+
+	#else:
+		#camera.set(cv2.CAP_PROP_POS_FRAMES, 0) # If out of frames, reset the video.
 
 	key = cv2.waitKey(20)
 	if key == 27:
 		break
 
-#cv2.destroyWindow("Original")
-#cv2.destroyWindow("Augmented")
 camera.release()
+#output.release()
 exit()
