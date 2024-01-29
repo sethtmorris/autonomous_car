@@ -1,2 +1,2 @@
 # autonomous_car
-Computer Engineering capstone project
+Self driving car software
